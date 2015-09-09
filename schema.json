@@ -1,0 +1,20 @@
+{"schema_class":"CalVAD::HPMS::Geocoder::Schema",
+
+ "connect_info":{
+     "dsn":"dbi:Pg:dbname=crs;host=127.0.0.1",
+     "user":"slash"
+ },
+ "loader_options":{
+     "dump_directory": "./lib",
+     "db_schema": ["public"],
+     "debug":false,
+     "moniker_parts":  ["schema", "name"],
+     "moniker_part_separator":  "::",
+     "constraint": "hpms",
+     "moniker_map" : {
+         "public":{"hpms" : "HPMS"}
+     },
+     "naming": {"ALL":"v8", "force_ascii" : true}
+ }
+
+}
