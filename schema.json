@@ -10,10 +10,7 @@
      "debug":false,
      "moniker_parts":  ["schema", "name"],
      "moniker_part_separator":  "::",
-     "constraint": "hpms",
-     "moniker_map" : {
-         "public":{"hpms" : "HPMS"}
-     },
+     "exclude": "hpms",
      "naming": {"ALL":"v8", "force_ascii" : true}
  }
 
