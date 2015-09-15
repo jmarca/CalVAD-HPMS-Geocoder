@@ -120,6 +120,12 @@ __PACKAGE__->table("crs_index");
   is_nullable: 1
   size: '12808,3519'
 
+=head2 geom
+
+  data_type: 'geometry'
+  is_nullable: 1
+  size: '58888,16'
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -160,6 +166,8 @@ __PACKAGE__->add_columns(
   { data_type => "numeric", is_nullable => 1, size => [4, 0] },
   "wkb_geometry",
   { data_type => "geometry", is_nullable => 1, size => "12808,3519" },
+  "geom",
+  { data_type => "geometry", is_nullable => 1, size => "58888,16" },
 );
 
 =head1 PRIMARY KEY
@@ -175,8 +183,8 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("ogc_fid");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2015-09-10 14:46:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:cOpvQwX4BOOBcxJ8mM0IAQ
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2015-09-14 10:38:49
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:H20NRtQ4LFIkTgm15nJ7bQ
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

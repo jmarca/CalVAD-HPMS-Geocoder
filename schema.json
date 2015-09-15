@@ -1,7 +1,7 @@
 {"schema_class":"CalVAD::HPMS::Geocoder::Schema",
 
  "connect_info":{
-     "dsn":"dbi:Pg:dbname=crs_small;host=192.168.0.1",
+     "dsn":"dbi:Pg:dbname=crs_small;host=127.0.0.1",
      "user":"slash"
  },
  "loader_options":{
@@ -11,6 +11,9 @@
      "moniker_parts":  ["schema", "name"],
      "moniker_part_separator":  "::",
      "exclude": "hpms",
+     "moniker_map" : {
+         "public":{"counties_fips" : "Public::CountiesFips"}
+     },
      "naming": {"ALL":"v8", "force_ascii" : true}
  }
 

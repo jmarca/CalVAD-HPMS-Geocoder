@@ -170,6 +170,12 @@ __PACKAGE__->table("roads_jun_2015");
   is_nullable: 1
   size: '12816,3519'
 
+=head2 geom
+
+  data_type: 'geometry'
+  is_nullable: 1
+  size: '58896,16'
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -230,6 +236,8 @@ __PACKAGE__->add_columns(
   { data_type => "double precision", is_nullable => 1 },
   "wkb_geometry",
   { data_type => "geometry", is_nullable => 1, size => "12816,3519" },
+  "geom",
+  { data_type => "geometry", is_nullable => 1, size => "58896,16" },
 );
 
 =head1 PRIMARY KEY
@@ -245,8 +253,8 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("objectid");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2015-09-10 14:46:45
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Csl1Ao+lbQhrt2hwFgSEgA
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2015-09-14 10:38:49
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vKYpC9MxWhqrSeR6+N13VQ
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

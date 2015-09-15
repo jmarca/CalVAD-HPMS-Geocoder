@@ -23,55 +23,117 @@ crs=# select count(*),"group",ST_Extent(wkb_geometry) as bbox from crs_index gro
 Going with group `11Q`, the spatial extent argument becomes the
 following.
 
+Actually no, going with `09Q`, `BOX(-120.500992371782 35.8332909935652,-120.000969732654 36.2502091197714)`.
 
 
-
-This is slightly larger than the box corresponding to CRS grid index
-number 940 (grid group 11P).  According to the CRS grid data, this
-should contain 22 sub-grids, which means that there are lots of
-highways and streets in this cell.
-
-The above bounding box needs to be converted to a better known SRS
-than 900914 to use with the OSM data:
+Okay, still not so clean.  How about all of Tulare County?
 
 ```
-BOX(-119.50096190029 36.2499498689845,-119.000934042247 36.6668715025746)
+crs=# select name,ST_Extent(wkb_geometry) from multipolygons where name = 'Tulare' group by name;
+  name  |                    st_extent
+--------+--------------------------------------------------
+ Tulare | BOX(-119.392846 36.123467,-119.295803 36.247664)
+(1 row)
+
 ```
+No, that got the city, I think.
+
+```
+crs=# select countyfp,ST_Extent(st_transform(wkb_geometry,4326)) from roads_jun_2015 where countyfp='107' group by countyfp;
+ countyfp |                                 st_extent
+----------+---------------------------------------------------------------------------
+ 107      | BOX(-119.573194000461 35.7894520004385,-118.00065799957 36.7416250002745)
+```
+
 
 
 So the complete call to load test OSM data is
 
 
 ```
-createdb -U slash crs_small
-psql -d crs_small -U slash -c 'CREATE EXTENSION postgis; CREATE EXTENSION hstore;'
+export PGUSER=slash
+export PGHOST=127.0.0.1
+dropdb -U slash -h $PGHOST crs_small
+createdb -U $PGUSER -h $PGHOST crs_small
+psql -d crs_small -U $PGUSER  -h $PGHOST -c 'CREATE EXTENSION postgis;'
+psql -d crs_small -U $PGUSER  -h $PGHOST -c 'CREATE EXTENSION hstore;'
+psql -d crs_small -U $PGUSER  -h $PGHOST -c 'CREATE EXTENSION pg_trgm;'
 
-ogr2ogr -progress -f PostgreSQL PG:'dbname=crs_small user=slash' -overwrite \
-        -spat -119.50096190029 36.2499498689845 -119.000934042247 36.6668715025746 \
-        -spat_srs 'EPSG:4326'  \
-        california-latest.osm.pbf \
-        -lco COLUMN_TYPES=other_tags=hstore
-
+PG_USE_COPY=yes \
+ogr2ogr -progress \
+  -f PostgreSQL PG:"dbname=crs_small user=$PGUSER host=$PGHOST" \
+  -overwrite \
+  -spat -119.573194000461 35.7894520004385 -118.00065799957 36.7416250002745 \
+  -spat_srs 'EPSG:4326' \
+  california-latest.osm.pbf \
+  -lco COLUMN_TYPES=other_tags=hstore -oo MAX_TMPFILE_SIZE=5000
 
 ```
+
+Writing the OSM data to the database will take some time, as there is
+a lot of data to sift through looking for this small bounding box.
 
 The Caltrans CRS grid data is loaded in a similar way using ogr2ogr.
 
 ```
-ogr2ogr -progress -f PostgreSQL PG:'dbname=crs_small user=slash' \
-        -spat -119.50096190029 36.2499498689845 -119.000934042247 36.6668715025746 \
+ogr2ogr -progress -f PostgreSQL PG:"dbname=crs_small user=$PGUSER host=$PGHOST" \
+        -spat -119.573194000461 35.7894520004385 -118.00065799957 36.7416250002745 \
         -spat_srs 'EPSG:4326'  \
         CRS_Index.shp
 
 ```
 
-And then the Caltrans CRS lines.
+That should load fairly quickly.  Finally, load the Caltrans CRS
+lines.  This command can't use the -progress flag because ogr2ogr
+complains that it will take too long, but it goes by really fast anyway.
 
 ```
-ogr2ogr -f PostgreSQL PG:'dbname=crs_small user=slash' \
-        -spat -119.50096190029 36.2499498689845 -119.000934042247 36.6668715025746 \
+ogr2ogr -f PostgreSQL PG:"dbname=crs_small user=$PGUSER host=$PGHOST" \
+        -spat -119.573194000461 35.7894520004385 -118.00065799957 36.7416250002745 \
         -spat_srs 'EPSG:4326'  \
         Roads_Jun30_2015_D06.gdb.zip \
         -nln 'roads_jun_2015'
+
+```
+
+It is useful to have a common projection.
+
+```
+psql -d crs_small -U $PGUSER  -h $PGHOST -c 'alter table crs_index add column geom geometry(Polygon,4326);'
+psql -d crs_small -U $PGUSER  -h $PGHOST -c 'update crs_index set geom = st_transform(wkb_geometry,4326);'
+
+psql -d crs_small -U $PGUSER  -h $PGHOST -c 'alter table roads_jun_2015 add column geom geometry(Multilinestring,4326);'
+psql -d crs_small -U $PGUSER  -h $PGHOST -c 'update roads_jun_2015 set geom = st_transform(wkb_geometry,4326);'
+
+```
+
+
+Next check that all is well.  These should be in one of the tests.
+
+```
+
+crs_small=# select count(*) from lines;
+ count
+-------
+  5501
+(1 row)
+
+crs_small=# select count(*) from points;
+ count
+-------
+   834
+(1 row)
+
+crs_small=# select count(*) from roads_jun_2015;
+ count
+-------
+ 12844
+(1 row)
+
+crs_small=# select count(*) from crs_index;
+ count
+-------
+    12
+(1 row)
 
 ```
