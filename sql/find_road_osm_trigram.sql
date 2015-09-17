@@ -54,7 +54,9 @@ WITH RECURSIVE
         join cnty on (ways.bbox && cnty.geom)
     ),
     name_values as (
-        select osm_id,name from tag_values where key ~* 'name'
+        select osm_id,name from tag_values where key ~* '
+ || quote_literal(name)
+ || '
     ),
     road_ranking as (
            select osm_id, name, similarity(name,$1) as score
