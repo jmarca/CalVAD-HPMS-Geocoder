@@ -137,3 +137,67 @@ crs_small=# select count(*) from crs_index;
 (1 row)
 
 ```
+
+
+# Using osmosis
+
+The problem with ogr2ogr is that it drops the links between ways and
+nodes.  I can use osm2pgrouting, or osmosis.
+
+
+First trying osmosis.
+
+## prep the db
+
+```
+createdb crs_small2
+psql -d crs_small2 -U $PGUSER  -h $PGHOST -c 'CREATE EXTENSION postgis;'
+psql -d crs_small2 -U $PGUSER  -h $PGHOST -c 'CREATE EXTENSION hstore;'
+psql -d crs_small2 -U $PGUSER  -h $PGHOST -c 'CREATE EXTENSION pg_trgm;'
+psql -U ${PSQL_USER} crs_small2 < ${OSMOSIS_DIR}/script/pgsnapshot_schema_0.6.sql
+psql -U ${PSQL_USER} crs_small2 < ${OSMOSIS_DIR}/script/pgsnapshot_schema_0.6_action.sql
+psql -U ${PSQL_USER} crs_small2 < ${OSMOSIS_DIR}/script/pgsnapshot_schema_0.6_bbox.sql
+psql -U ${PSQL_USER} crs_small2 < ${OSMOSIS_DIR}/script/pgsnapshot_schema_0.6_linestring.sql
+
+```
+
+
+## the osmosis call
+
+```
+osmosis --read-pbf california-latest.osm.pbf \
+--bb left=-119.573194000461 bottom=35.7894520004385 right=-118.00065799957 top=36.7416250002745 \
+--log-progress \
+--write-pgsql \
+database=crs_small2 user=slash
+```
+
+# osm2pgrouting
+
+Okay and try this too
+
+
+First a snippet of california
+
+```
+osmosis --read-pbf california-latest.osm.pbf \
+--bb left=-119.573194000461 bottom=35.7894520004385 right=-118.00065799957 top=36.7416250002745 \
+--log-progress \
+--write-xml file=tulare.osm
+```
+
+Prepare the database.
+
+```
+createdb  -U $PSQL_USER  -h $PSQL_HOST crs_small_routing
+psql -d crs_small_routing -U $PSQL_USER  -h $PSQL_HOST -c 'CREATE EXTENSION postgis;'
+psql -d crs_small_routing -U $PSQL_USER  -h $PSQL_HOST -c 'CREATE EXTENSION hstore;'
+psql -d crs_small_routing -U $PSQL_USER  -h $PSQL_HOST -c 'CREATE EXTENSION pg_trgm;'
+psql -d crs_small_routing -U $PSQL_USER  -h $PSQL_HOST -c 'CREATE EXTENSION pgrouting;'
+```
+
+Load the data from the OSM snip created above.
+
+```
+osm2pgrouting --file "tulare.osm"  --conf "/usr/share/osm2pgrouting/mapconfig.xml"  --dbname crs_small_routing   --user $PSQL_USER --host $PSQL_HOST   --clean true
+```
