@@ -509,12 +509,16 @@ WITH RECURSIVE
         where score > 0.1
         group by osm_id
     ),
+    named_road_ranking_no_repeats as (
+        select (array_agg(v.name))[1] as name, r.osm_id, r.score
+        from road_ranking_no_repeats r
+        join road_ranking v on (r.osm_id=v.osm_id and r.score=v.score)
+        group by r.osm_id,r.score
+    ),
     road_ranking_max as (
-        select distinct ways.*, score
-        from road_ranking_no_repeats
+        select distinct ways.*, r.score, r.name
+        from named_road_ranking_no_repeats r
         join ways on (osm_id=id)
-        --  join road_max on (1=1)
-        where score > 0.1
     ),
     from_ranking as (
            select osm_id, name, similarity(name,'PALM ST') as score
@@ -567,7 +571,10 @@ WITH RECURSIVE
       select * from ways join to_ways on (road_id=id)
    ),
    start_point  as (
-      select * from ways join from_ways on (road_id=id)
+      select ways.*,name
+      from ways
+      join from_ways on (road_id=id)
+      join road_ranking_max USING (id)
    ),
    way_path (id, path, nodes, distance, depth, cyclic, theend)
       as (
@@ -648,8 +655,10 @@ WITH RECURSIVE
        select st_collect(geom) as geom from get_geometries
    )
 select
-   (st_length(st_transform(geom,32611)) * 0.000621371192) as len,
-   st_asewkt(st_linemerge(geom))
-   from geom_path;
+   name,
+   st_asewkt(st_linemerge(geom)),
+   (st_length(st_transform(geom,32611)) * 0.000621371192) as len
+   from geom_path,start_point
+   ;
 
 -- huzzah!
