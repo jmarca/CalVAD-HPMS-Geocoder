@@ -72,7 +72,7 @@ isnt($host,undef,'need a valid pg host defined in config file');
 
 my $admin_dbh;
 eval{
-    $admin_dbh = DBI->connect("dbi:Pg:dbname=$admindb", $adminuser);
+    $admin_dbh = DBI->connect("dbi:Pg:dbname=$admindb;host=$host;port=$port", $adminuser);
 };
 if($@) {
     carp 'must have valid admin credentials in test.config.json, and a valid admin password setup in .pgpass file';
@@ -208,7 +208,7 @@ END{
     # $connect = undef;
     # $obj = undef;
     eval{
-        my $dbh = DBI->connect("dbi:Pg:dbname=$admindb", $adminuser);
+        my $dbh = DBI->connect("dbi:Pg:dbname=$admindb;host=$host;port=$port", $adminuser);
         $dbh->do("drop database $dbname");
     };
     if($@){

@@ -24,6 +24,7 @@ as
 $BODY$
 DECLARE
     var_sql text := '';
+    name_pattern text := 'name';
     ret record;
     in_statefp varchar(2) ;
     results streetlength;
@@ -55,7 +56,7 @@ WITH RECURSIVE
     ),
     name_values as (
         select osm_id,name from tag_values where key ~* '
- || quote_literal(name)
+ || quote_literal(name_pattern)
  || '
     ),
     road_ranking as (
