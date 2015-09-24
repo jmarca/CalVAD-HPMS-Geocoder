@@ -1,6 +1,8 @@
 DROP TYPE IF EXISTS streetlength CASCADE;
 CREATE TYPE streetlength AS (
        name varchar,
+       fromname varchar,
+       toname varchar,
        geom  geometry,
        len numeric
 );
@@ -25,6 +27,9 @@ $BODY$
 DECLARE
     var_sql text := '';
     name_pattern text := 'name';
+    type_pattern text := '_type';
+    direction_pattern text := '_direction';
+    highway_tag text := 'highway';
     ret record;
     in_statefp varchar(2) ;
     results streetlength;
@@ -46,22 +51,47 @@ BEGIN
     END IF;
 var_sql := '
 WITH RECURSIVE
+    roadwayname (n) as (
+       select $1::text
+    ),
+    fromname (n) as (
+       select $3::text
+    ),
+    toname (n) as (
+       select $4::text
+    ),
+    fipscode (c) as (
+       select $2::varchar
+    ),
     cnty as (select ST_Union(geom4326) as geom
              from public.carb_counties_aligned_03 c
              join counties_fips cf  on (cf.name ~* c.name)
-             where fips = $2 group by c.name),
+             join fipscode on (fipscode.c = cf.fips)
+             group by c.name),
+    roadways as (
+        select *
+        from ways
+        where tags ? '
+|| quote_literal(highway_tag)
+|| '
+    ),
     tag_values as (
-        select id as osm_id, svals(tags) as name, skeys(tags) as key from ways
-        join cnty on (ways.bbox && cnty.geom)
+        select id as osm_id, svals(tags) as name, skeys(tags) as key
+        from roadways  join cnty on (roadways.bbox && cnty.geom)
     ),
     name_values as (
-        select osm_id,name from tag_values where key ~* '
- || quote_literal(name_pattern)
- || '
+        select osm_id,name from tag_values
+        where key ~* '
+|| quote_literal(name_pattern)
+|| ' and key !~* '
+|| quote_literal(type_pattern)
+|| ' and key !~* '
+|| quote_literal(direction_pattern)
+|| '
     ),
     road_ranking as (
-           select osm_id, name, similarity(name,$1) as score
-           from name_values
+           select osm_id, name, similarity(name,rn.n) as score
+           from name_values,roadwayname rn
     ),
     road_ranking_no_repeats as (
         select osm_id, max(score) as score
@@ -76,66 +106,67 @@ WITH RECURSIVE
         group by r.osm_id,r.score
     ),
     road_ranking_max as (
-        select distinct ways.*, r.score, r.name
+        select distinct roadways.*, r.score, r.name
         from named_road_ranking_no_repeats r
-        join ways on (osm_id=id)
+        join roadways on (osm_id=id)
     ),
     from_ranking as (
-           select osm_id, name, similarity(name,$3) as score
-           from name_values
+           select osm_id, name, similarity(name,fm.n) as score
+           from name_values,fromname fm
     ),
     from_max as (
         select max(score) as max_from_score
         from from_ranking
     ),
     from_ranking_max as (
-        select osm_id,max(score) as score
+        select osm_id,name,score
         from from_ranking, from_max
         where score > max_from_score - 0.1
-        group by osm_id
     ),
     to_ranking as (
-           select osm_id, name, similarity(name,$4) as score
-           from name_values
+           select osm_id, name, similarity(name,tm.n) as score
+           from name_values,toname tm
     ),
     to_max as (
         select max(score) as max_to_score
         from to_ranking
     ),
     to_ranking_max as (
-        select osm_id,max(score) as score
+        select osm_id,name,score
         from to_ranking, to_max
         where score > max_to_score - 0.1
-        group by osm_id
     ),
-    from_ways as (
-        select distinct m.nodes as road_nodes,w2.nodes as crossing_nodes,m.id as road_id, m.score as road_score,f.score as crossing_score
+    end_points_all as (
+        select 1 as which, osm_id,name,score from from_ranking_max
+        union
+        select 2 as which, osm_id,name,score from to_ranking_max
+        order by score desc
+    ),
+    crossing_candidates as (
+        select distinct which, m.name, m.nodes as road_nodes,w2.nodes as crossing_nodes,
+                        m.id as road_id, m.score as road_score,
+                        f.osm_id as crossing_id,f.score as crossing_score,f.name as crossing_name
         from road_ranking_max m
-        join ways w2 on (m.nodes && w2.nodes)
-        join from_ranking_max f on (w2.id = f.osm_id)
+        join roadways w2 on (m.nodes && w2.nodes)
+        join end_points_all f on (w2.id = f.osm_id)
         where m.id != f.osm_id
+        order by road_score desc,crossing_score desc
+    ),
+    start_point as (
+        select which,name,crossing_name,roadways.*
+        from crossing_candidates
+        join roadways on (road_id=roadways.id)
         order by road_score desc,crossing_score desc
         limit 1
     ),
-    to_ways as (
-        select distinct m.nodes as road_nodes,w2.nodes as crossing_nodes,m.id as road_id, m.score as road_score,t.score as crossing_score
-        from road_ranking_max m
-        join ways w2 on (m.nodes && w2.nodes)
-        join to_ranking_max t on (w2.id = t.osm_id)
-        where m.id != t.osm_id
-        order by road_score desc, crossing_score desc
+    end_point as (
+        select c.which,c.name,c.crossing_name,roadways.*
+        from crossing_candidates c
+        join start_point s on (c.which != s.which)
+        join roadways on (c.road_id=roadways.id)
+        order by road_score desc,crossing_score desc
         limit 1
     ),
-    -- slightly redundant here
-   end_point as (
-      select * from ways join to_ways on (road_id=id)
-   ),
-   start_point  as (
-      select ways.*,name
-      from ways
-      join from_ways on (road_id=id)
-      join road_ranking_max USING (id)
-   ),
    way_path (id, path, nodes, distance, depth, cyclic, theend)
       as (
       select sp.id,
@@ -215,10 +246,12 @@ WITH RECURSIVE
        select st_collect(geom) as geom from get_geometries
    )
 select
-   name,
+   s.name,
+   s.crossing_name as from_name,
+   e.crossing_name as to_name,
    st_asewkt(st_linemerge(geom)),
    (st_length(st_transform(geom,32611)) * 0.000621371192) as len
-   from geom_path,start_point
+   from geom_path,start_point s,end_point e
 ';
   EXECUTE var_sql into results USING roadway,in_county,from_road,to_road;
   RETURN results;

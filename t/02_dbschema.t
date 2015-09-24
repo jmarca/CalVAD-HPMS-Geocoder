@@ -155,52 +155,27 @@ my $geocoder = object_ok(
      },
     );
 
-# # make a geocoder
-# my $geocoder  = CalVAD::HPMS::Geocoder->new(
-
-#     # first the sql role
-#     'host_psql'     => $host,
-#     'port_psql'     => $port,
-#     'dbname_psql'   => $dbname,
-#     'username_psql' => $user,
-
-# );
-
-# isnt($geocoder, undef, 'object creation should work with all required fields');
-# isa_ok($geocoder,'CalVAD::HPMS::Geocoder','geocoder is an geocoder');
-
-# my $connect;
-# eval {
-#   $connect = $geocoder->_connection_psql;
-# };
-# if($@) {
-#   carp $@;
-# }
-
-# isnt($connect, undef, 'db connection should be possible');
-# isa_ok($connect,'CalVAD::HPMS::Geocoder::Schema','db connection is right class');
-
 # test simple query works
 
-my $rs = $geocoder->resultset('Public::Line');
+my $rs = $geocoder->resultset('Public::Way');
 isa_ok($rs,'DBIx::Class::ResultSet','got a result set');
 my @all = $rs->all();
-is(@all,39860,'got all lines expected');
+is(@all,76606,'got all ways expected');
 
-$rs = $geocoder->resultset('Public::Point');
+$rs = $geocoder->resultset('Public::Node');
 isa_ok($rs,'DBIx::Class::ResultSet','got a result set');
 @all = $rs->all();
-is(@all,8601,'got all points expected');
+is(@all,1158941,'got all points expected');
 
-$rs = $geocoder->resultset('Public::CrsIndex');
-isa_ok($rs,'DBIx::Class::ResultSet','got a result set');
-@all = $rs->all();
-is(@all,91,'got all CRS grids expected');
+# $rs = $geocoder->resultset('Public::CrsIndex');
+# isa_ok($rs,'DBIx::Class::ResultSet','got a result set');
+# @all = $rs->all();
+# is(@all,91,'got all CRS grids expected');
 
-$rs = $geocoder->resultset('Public::RoadsJun2015');
-isa_ok($rs,'DBIx::Class::ResultSet','got a result set');
-@all = $rs->all();
-is(@all,59733,'got all CRS roads expected');
+# $rs = $geocoder->resultset('Public::RoadsJun2015');
+# isa_ok($rs,'DBIx::Class::ResultSet','got a result set');
+# @all = $rs->all();
+# is(@all,59733,'got all CRS roads expected');
 
 $rs = $geocoder->resultset('Public::CarbCountiesAligned03');
 isa_ok($rs,'DBIx::Class::ResultSet','got a result set');

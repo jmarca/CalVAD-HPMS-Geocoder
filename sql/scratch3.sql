@@ -17,18 +17,44 @@ select (res).name,(res).len  from (select find_road_from_to_osm_trigram('CHURCH 
 --------+------------------
  Church | 1.00101155503447
 
+select (res).name,(res).len  from (select find_road_from_to_osm_trigram('CHURCH RD',  'SIERRA AVE','ARMSTRONG AVE', '06107') as res) a ;
+
+  name  |       len
+--------+------------------
+ Church | 1.00101155503447
+(1 row)
+
+-- reverse query worked okay
+
+
 select (res).name,(res).len  from (select find_road_from_to_osm_trigram('SUCCESS DR', 'SPRINGVILLE AVE', 'RD 248', '06107') as res) a ;
 
         name        |       len
 --------------------+------------------
  East Success Drive | 1.73048776315583
+        name        |       len
+--------------------+------------------
+ East Success Drive | 1.73048776315583
 (1 row)
+
+select (res).name,(res).len  from (select find_road_from_to_osm_trigram('SUCCESS DR', 'RD 248', 'SPRINGVILLE AVE', '06107') as res) a ;
+        name        |       len
+--------------------+------------------
+ East Success Drive | 1.73048776315583
+
+
+-- fixed reverse query failure here.
+
 
 select (res).name,(res).len  from (select find_road_from_to_osm_trigram('AVENUE 116', 'ROAD 264', 'DIAGONAL 254', '06107') as res) a ;
     name    |       len
 ------------+------------------
  Avenue 116 | 1.42833243170781
 (1 row)
+
+select (res).name,(res).len  from (select find_road_from_to_osm_trigram('AVENUE 116', 'DIAGONAL 254', 'ROAD 264', '06107') as res) a ;
+
+-- fixed here too
 
 --- hmm, not so good on that one
 select (res).name,(res).len,st_asewkt((res).geom)  from (select find_road_from_to_osm_trigram('AVENUE 116', 'ROAD 264', 'DIAGONAL 254', '06107') as res) a ;
@@ -44,4 +70,7 @@ select coalesce ( alternative_route_name_txt,route_id,aadt_cmt) as bleh,aadt_cmt
  DIAGONAL 103                              | .01 MI N AVENUE 248 to ROAD 100                     |                 0.67
 
 
-select (res).name,(res).len  from (select find_road_from_to_osm_trigram('DIAGONAL 103', 'AVENUE 248','ROAD 100', '06107') as res) a ;g
+select (res).name,(res).len  from (select find_road_from_to_osm_trigram('DIAGONAL 103', 'AVENUE 248','ROAD 100', '06107') as res) a ;
+
+
+-- need to fix the ordering bug
