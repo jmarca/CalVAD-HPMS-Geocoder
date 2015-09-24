@@ -446,3 +446,18 @@ select
    (st_length(st_transform(geom,32611)) * 0.000621371192) as len
    from geom_path,start_point s,end_point e
    ;
+
+
+CREATE TABLE hpms.hpms_match_details (
+    hpms_id integer NOT NULL,
+    direction text,
+    intended_name varchar (256),
+    intended_from varchar (256),
+    intended_to   varchar (256),
+    matched_name varchar (256),
+    matched_from varchar (256),
+    matched_to   varchar (256),
+    primary key (hpms_id,direction)
+);
+ALTER TABLE ONLY hpms.hpms_match_details
+    ADD CONSTRAINT hpms_match_details_hpms_id_fkey FOREIGN KEY (hpms_id) REFERENCES hpms.hpms(id) ON DELETE CASCADE;

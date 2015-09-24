@@ -63,16 +63,16 @@ class Geocoder using Moose : ro {
     my $_get_roadway_section_trigram_osm = sub{
         my ($storage, $dbh, $nearcl, @colvals ) = @_;
 
-        my $geoquery = q{select (res).name,(res).len,(res).geom  from (select find_road_from_to_osm_trigram($1,$2,$3,$4) as res) a };
+        my $geoquery = q{select (res).name,(res).len,(res).geom,(res).fromname,(res).toname  from (select find_road_from_to_osm_trigram($1,$2,$3,$4) as res) a };
         my @row;
-        carp 'calling osm county version';
+
         if($nearcl){
             croak 'not yet handling county line conditions properly';
             # $geoquery =q{select st_asewkt(st_transform(geom,4326)),len  FROM find_road_cl_osm_cnty_trigram( $1,$2,$3 )};
             # query_dump($geoquery,@colvals[0,1,3]);
             # @row = $dbh->selectrow_array($geoquery,undef, @colvals[0,1,3]);
         }else{
-            query_dump($geoquery,@colvals);
+            # query_dump($geoquery,@colvals);
             @row = $dbh->selectrow_array($geoquery,undef, @colvals);
         }
         return @row;
