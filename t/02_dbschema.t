@@ -125,8 +125,14 @@ my $db_deploy_args = ["pg_restore",
                       "-h", "$host",
                       "-p", "$port",
                       "./sql/geocode_test_db"];
+my $matching_function =  ["psql",
+                          "-d", "$dbname",
+                          "-U", "$user",
+                          "-h", "$host",
+                          "-p", "$port",
+                          "-f", "./sql/find_road_osm_trigram.sql"];
 
-for my $args ( $postgis_args, $postgis_topology_args, $db_deploy_args)
+for my $args ( $postgis_args, $postgis_topology_args, $db_deploy_args, $matching_function)
 {
     my @sysargs = @{$args};
     system(@sysargs) == 0
