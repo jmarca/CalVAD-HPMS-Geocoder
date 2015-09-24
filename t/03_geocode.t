@@ -67,105 +67,49 @@ isnt($dbname,undef,'need a valid pg db defined in config file');
 isnt($host,undef,'need a valid pg host defined in config file');
 
 ##################################################
-# create testing database
+# create testing database in 02 test
 ##################################################
 
-my $admin_dbh;
-eval{
-    $admin_dbh = DBI->connect("dbi:Pg:dbname=$admindb;host=$host;port=$port", $adminuser);
-};
-if($@) {
-    carp 'must have valid admin credentials in test.config.json, and a valid admin password setup in .pgpass file';
-    croak $@;
-}
+# make a geocoder
+my $geocoder = object_ok(
+    sub {
+        CalVAD::HPMS::Geocoder->new(
+            # first the sql role
+            'host_psql'     => $host,
+            'port_psql'     => $port,
+            'dbname_psql'   => $dbname,
+            'username_psql' => $user,
+            );
+    },
+    '$geocoder',
+    isa   => [qw( CalVAD::HPMS::Geocoder Moose::Object )],
+    does  => [qw( DB::Connection )],
+    can   => [qw( get_roadway_section_osm )],
+    # clean => 1,
+    more  => sub {
+        my $object = shift;
+        isa_ok($object->_connection_psql, 'CalVAD::HPMS::Geocoder::Schema');
+    },
+    );
 
-my $create = "create database $dbname";
-if($user ne $adminuser){
-    $create .= " with owner $user";
-}
-eval {
-        $admin_dbh->do($create);
-};
-if($@) {
-    carp 'test db creation failed';
-    carp $@;
-    carp Dumper [
-        'host_psql'=>$host,
-        'port_psql'=>$port,
-        'dbname_psql'=>$dbname,
-        'admin database'=>$admindb,
-        'admin user'=>$adminuser,
-        ];
+# try geocoding something
 
-    croak 'failed to create test database';
-}
+my @result = $geocoder->get_roadway_section_osm(
+    'from' => 'DIAGONAL 254',
+    'locality' => '06107',
+    'road' => 'AVENUE 116',
+    'to' => 'ROAD 264'
+    );
 
-## deploy required tables via DBIx::Class
-
-## deploy just the tables I'm going to be accessing during testing
-
-## create postgis extensions
-my $postgis_args =  ["psql",
-                      "-d", "$dbname",
-                      "-U", "$user",
-                      "-h", "$host",
-                      "-p", "$port",
-                     "-c", "CREATE EXTENSION postgis;"];
-
-# topology not strictly necessary
-my $postgis_topology_args =  ["psql",
-                              "-d", "$dbname",
-                              "-U", "$user",
-                              "-h", "$host",
-                              "-p", "$port",
-                              "-c", "CREATE EXTENSION postgis_topology;"];
-my $db_deploy_args = ["pg_restore",
-                      "-d", "$dbname",
-                      "-U", "$user",
-                      "-h", "$host",
-                      "-p", "$port",
-                      "./sql/geocode_test_db"];
-
-# for my $args ( $postgis_args, $postgis_topology_args, $db_deploy_args)
-# {
-#     my @sysargs = @{$args};
-#     system(@sysargs) == 0
-#       or croak "system @sysargs failed: $?";
-# }
-
-# # make a geocoder
-# my $geocoder  = CalVAD::HPMS::Geocoder->new(
-
-#     # first the sql role
-#     'host_psql'     => $host,
-#     'port_psql'     => $port,
-#     'dbname_psql'   => $dbname,
-#     'username_psql' => $user,
-
-# );
-
-# isnt($geocoder, undef, 'object creation should work with all required fields');
-# isa_ok($geocoder,'CalVAD::HPMS::Geocoder','geocoder is an geocoder');
-
-# my $connect;
-# eval {
-#   $connect = $geocoder->_connection_psql;
-# };
-# if($@) {
-#   carp $@;
-# }
-
-# isnt($connect, undef, 'db connection should be possible');
-# isa_ok($connect,'CalVAD::HPMS::Geocoder::Schema','db connection is right class');
-
+is($result[0],'Avenue 116');
+is($result[2],'0102000020E61000000D000000AAF5D95C90C05DC092544BDF10004240F63D8FF664C05DC0AB9C514E0F00424086600B3062C05DC00FB8AE98110042400415FA0560C05DC0F683150214004240EB4DB10F57C05DC0E54C6E6F120042400C94145800C05DC026E0D748120042407E569929ADBF5DC0E0675C381000424014ECBFCE4DBF5DC0469561DC0D004240CA1B60E63BBF5DC037FA980F08004240FF3F4E9830BF5DC0EFC8586DFEFF41407F9B6AD212BF5DC0CF21BAB1EAFF41409262DBFD05BF5DC04AF7297DD7FF4140BA2B60A7FDBE5DC0363A8CEEC5FF4140');
+is($result[1],1.42833243170781);
 
 done_testing;
 
 
 
 END{
-    # $connect = undef;
-    # $obj = undef;
     eval{
         my $dbh = DBI->connect("dbi:Pg:dbname=$admindb;host=$host;port=$port", $adminuser);
         $dbh->do("drop database $dbname");

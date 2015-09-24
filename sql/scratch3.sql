@@ -44,4 +44,4 @@ select coalesce ( alternative_route_name_txt,route_id,aadt_cmt) as bleh,aadt_cmt
  DIAGONAL 103                              | .01 MI N AVENUE 248 to ROAD 100                     |                 0.67
 
 
-select (res).name,(res).len  from (select find_road_from_to_osm_trigram('DIAGONAL 103', 'AVENUE 248','ROAD 100', '06107') as res) a ;
+select (res).name,(res).len  from (select find_road_from_to_osm_trigram('DIAGONAL 103', 'AVENUE 248','ROAD 100', '06107') as res) a ;g

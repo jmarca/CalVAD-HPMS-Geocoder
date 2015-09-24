@@ -133,30 +133,52 @@ for my $args ( $postgis_args, $postgis_topology_args, $db_deploy_args)
       or croak "system @sysargs failed: $?";
 }
 
-# make a geocoder
-my $geocoder  = CalVAD::HPMS::Geocoder->new(
 
-    # first the sql role
-    'host_psql'     => $host,
-    'port_psql'     => $port,
-    'dbname_psql'   => $dbname,
-    'username_psql' => $user,
+my $geocoder = object_ok(
+    sub {
+        CalVAD::HPMS::Geocoder->new(
+            # first the sql role
+            'host_psql'     => $host,
+            'port_psql'     => $port,
+            'dbname_psql'   => $dbname,
+            'username_psql' => $user,
+            );
+    },
+    '$geocoder',
+    isa   => [qw( CalVAD::HPMS::Geocoder Moose::Object )],
+    does  => [qw( DB::Connection )],
+    can   => [qw( get_roadway_section_osm )],
+    # clean => 1,
+    more  => sub {
+        my $object = shift;
+        isa_ok($object->_connection_psql, 'CalVAD::HPMS::Geocoder::Schema');
+     },
+    );
 
-);
+# # make a geocoder
+# my $geocoder  = CalVAD::HPMS::Geocoder->new(
 
-isnt($geocoder, undef, 'object creation should work with all required fields');
-isa_ok($geocoder,'CalVAD::HPMS::Geocoder','geocoder is an geocoder');
+#     # first the sql role
+#     'host_psql'     => $host,
+#     'port_psql'     => $port,
+#     'dbname_psql'   => $dbname,
+#     'username_psql' => $user,
 
-my $connect;
-eval {
-  $connect = $geocoder->_connection_psql;
-};
-if($@) {
-  carp $@;
-}
+# );
 
-isnt($connect, undef, 'db connection should be possible');
-isa_ok($connect,'CalVAD::HPMS::Geocoder::Schema','db connection is right class');
+# isnt($geocoder, undef, 'object creation should work with all required fields');
+# isa_ok($geocoder,'CalVAD::HPMS::Geocoder','geocoder is an geocoder');
+
+# my $connect;
+# eval {
+#   $connect = $geocoder->_connection_psql;
+# };
+# if($@) {
+#   carp $@;
+# }
+
+# isnt($connect, undef, 'db connection should be possible');
+# isa_ok($connect,'CalVAD::HPMS::Geocoder::Schema','db connection is right class');
 
 # test simple query works
 
@@ -205,13 +227,5 @@ done_testing;
 
 
 END{
-    # $connect = undef;
-    # $obj = undef;
-    eval{
-        my $dbh = DBI->connect("dbi:Pg:dbname=$admindb;host=$host;port=$port", $adminuser);
-        $dbh->do("drop database $dbname");
-    };
-    if($@){
-        carp $@;
-    }
+    # drop db after geocoding tests
 }

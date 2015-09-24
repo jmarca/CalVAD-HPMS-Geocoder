@@ -13,13 +13,12 @@ class Geocoder using Moose : ro {
 
     use CalVAD::HPMS::Geocoder::Schema;
     # use CalVAD::HPMS::Cities;
-    # use CalVAD::HPMS::CensusAbbrev;
-    # my $abbrev_fixer = CalVAD::HPMS::CensusAbbrev->new();
+    use CalVAD::HPMS::CensusAbbrev;
 
     use DBI qw(:sql_types);
     use DBD::Pg  qw(:pg_types);
 
-        my $param = 'psql';
+    my $param = 'psql';
     method _build__connection_psql {
 
         # process my passed options for psql attributes
@@ -45,6 +44,10 @@ class Geocoder using Moose : ro {
     has 'trigram' => (is => 'rw', isa => 'Bool', 'default'=>0);
     has 'county' => (is => 'rw', isa => 'Bool', 'default'=>0);
 
+    my $abbrev_fixer = CalVAD::HPMS::CensusAbbrev->new();
+
+
+
     my $km_to_miles = 0.621371192;
 
     sub query_dump {
@@ -57,10 +60,10 @@ class Geocoder using Moose : ro {
       return;
     }
 
-    my $_get_roadway_section_trigram_county_osm = sub{
+    my $_get_roadway_section_trigram_osm = sub{
         my ($storage, $dbh, $nearcl, @colvals ) = @_;
 
-        my $geoquery = q{select (res).name,(res).len,(res).geom  from (select find_road_from_to_osm_trigram($1,$2,$3,$4)) as res) a };
+        my $geoquery = q{select (res).name,(res).len,(res).geom  from (select find_road_from_to_osm_trigram($1,$2,$3,$4) as res) a };
         my @row;
         carp 'calling osm county version';
         if($nearcl){
@@ -76,91 +79,80 @@ class Geocoder using Moose : ro {
     };
 
     # # will always use trigrams
-    # method get_roadway_section_osm (Str :$locality, Str :$road, Str :$from, Str :$to?){
-    #     # my $city = $cities->replace_city_abbrev($locality) || $locality;
+    method get_roadway_section_osm (Str :$locality, Str :$road, Str :$from?, Str :$to?){
 
-    #   # # sometimes the city is repeated in the streets
-    #   # for my $citycheck ($road,$from,$to){
-    #   #   if($citycheck =~ /\s$locality(\s|$)/i ){
-    #   #     $citycheck =~ s/\s$locality(\s|$)/ /i ;
-    #   #   }
-    #   #   # not sure.. railroad maybe?
-    #   #   if($citycheck =~ /URL\s*@/i ){
-    #   #     $citycheck =~ s/URL\s*@//i ;
-    #   #   }
-    #   # }
+      my $nearcl;
+      my $param0;
+      my @param12;
 
-    #   my $nearcl;
-    #   my $param0;
-    #   my @param12;
+      $param0=$abbrev_fixer->replace_census_abbrev_trigram($road);
 
-    #   $param0=$abbrev_fixer->replace_census_abbrev_trigram($road);
+      for my $crossing ($from,$to){
+        # deal here with something like "CL @" which indicates city line or county line
+        if($crossing =~ /^cl/i){
+          $crossing =~ s/cl\s*@?//i;
+          $nearcl = 1;
+        }
+        if($crossing =~ /county\s*line/i){
+          $crossing = '';
+          $nearcl = 1;
+        }
+        if($crossing =~ /\sco\sln/i){
+          $crossing = '';
+          $nearcl = 1;
+        }
+        # get rid of parenthetical remarks
+        if($crossing =~ /\(.*\)/){
+          $crossing =~ s/\(.*\)//;
+        }
 
-    #   for my $crossing ($from,$to){
-    #     # deal here with something like "CL @" which indicates city line or county line
-    #     if($crossing =~ /^cl/i){
-    #       $crossing =~ s/cl\s*@?//i;
-    #       $nearcl = 1;
-    #     }
-    #     if($crossing =~ /county\s*line/i){
-    #       $crossing = '';
-    #       $nearcl = 1;
-    #     }
-    #     if($crossing =~ /\sco\sln/i){
-    #       $crossing = '';
-    #       $nearcl = 1;
-    #     }
-    #     # get rid of parenthetical remarks
-    #     if($crossing =~ /\(.*\)/){
-    #       $crossing =~ s/\(.*\)//;
-    #     }
-
-    #     if( $crossing =~ /\//){
-    #       my @xing;
-    #       # split on the slash, recombine
-    #       my  @twostreets = split q{/},$crossing;
-    #       for my $str (@twostreets){
-    #         if(!$str){
-    #           next;
-    #         }
-    #         my $result = $abbrev_fixer->replace_census_abbrev_trigram($str,1);
-    #         if($result){
-    #           push @xing,$result;
-    #         }
-    #       }
-    #       if(scalar @xing){
-    #           # just use the longer of the two
-    #           my $longer = $xing[0];
-    #           my $longest = length $longer ;
-    #           for (@xing){
-    #               if(length $_ > $longest) {
-    #                   $longer = $_;
-    #                   $longest = length $longer ;
-    #               }
-    #           }
-    #           push @param12, $longer;
+        if( $crossing =~ /\//){
+          my @xing;
+          # split on the slash, recombine
+          my  @twostreets = split q{/},$crossing;
+          for my $str (@twostreets){
+            if(!$str){
+              next;
+            }
+            my $result = $abbrev_fixer->replace_census_abbrev_trigram($str,1);
+            if($result){
+              push @xing,$result;
+            }
+          }
+          if(scalar @xing){
+              # just use the longer of the two
+              my $longer = $xing[0];
+              my $longest = length $longer ;
+              for (@xing){
+                  if(length $_ > $longest) {
+                      $longer = $_;
+                      $longest = length $longer ;
+                  }
+              }
+              push @param12, $longer;
 
 
-    #       }else{ # this doesn't really make sense, but whatever.  the idea is
-    #              # that if hpms give me unparseable garbage, then just get all
-    #              # of the road inside of the city limits
-    #         $nearcl = 1;
-    #       }
-    #     }else{
-    #         my $result = $abbrev_fixer->replace_census_abbrev_trigram($crossing,1);
-    #         push @param12,$result;
-    #     }
-    #   }
-    #   my @bindarray = ();
-    #   my $geom;
-    #     @bindarray = ($param0,$param12[0],$param12[1],$city);
+          }else{ # this doesn't really make sense, but whatever.  the idea is
+                 # that if hpms give me unparseable garbage, then just get all
+                 # of the road inside of the city limits
+            $nearcl = 1;
+          }
+        }else{
+            my $result = $abbrev_fixer->replace_census_abbrev_trigram($crossing,1);
+            push @param12,$result;
+        }
+      }
+      my @bindarray = ();
+      my $geom;
+        @bindarray = ($param0,$param12[0],$param12[1],$locality);
 
-    #   if($self->county){
-    #       return $self->storage->dbh_do( $_get_roadway_section_trigram_county_osm,$nearcl, @bindarray);
-    #   }else{
-    #       return  $self->storage->dbh_do( $_get_roadway_section_trigram_osm,$nearcl, @bindarray);
-    #   }
-    # }
+      if($self->county){
+          # return $self->storage->dbh_do( $_get_roadway_section_trigram_county_osm,$nearcl, @bindarray);
+          croak 'no county option at the moment';
+      }else{
+          return  $self->storage->dbh_do( $_get_roadway_section_trigram_osm,$nearcl, @bindarray);
+      }
+    }
 
 
 
