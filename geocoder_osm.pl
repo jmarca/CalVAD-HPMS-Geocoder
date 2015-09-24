@@ -107,6 +107,34 @@ my $geocoder = CalVAD::HPMS::Geocoder->new(
     'county'        => $county,
 );
 
+# quick test to make sure everything is hunky dunky
+
+my $ways = $geocoder->resultset('Public::Way')->count();
+carp "db has $ways ways";
+
+# make sure the geocoder function exists and is up to date
+my @matching_function =  ("psql",
+                          "-d", "$osm_dbname",
+                          "-U", "$osm_user",
+                          "-h", "$osm_host",
+                          "-p", "$osm_port",
+                          "-f", "./sql/find_road_osm_trigram.sql");
+my @pg_trigram_args =  ("psql",
+                              "-d", "$osm_dbname",
+                              "-U", "$osm_user",
+                              "-h", "$osm_host",
+                              "-p", "$osm_port",
+                              "-c", "CREATE EXTENSION pg_trgm;");
+
+
+system(@matching_function) == 0
+    or croak "system @matching_function failed: $?";
+
+system(@pg_trigram_args) == 0
+    or croak "system @pg_trigram_args failed: $?";
+
+
+
 sub geometry_handler {
     my ( $records, $geocoder ) = @_;
     # my $km_to_miles = 0.621371192;
@@ -183,7 +211,7 @@ sub geometry_handler {
     };
 }
 
-my $stop = 30;
+my $stop = 2;
 my $counter          = 0;
 my $choked           = 0;
 my $failed           = 0;
