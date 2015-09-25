@@ -85,32 +85,8 @@ my $osm_host = $cfg->{'postgresql'}->{'osm'}->{'host'} || '127.0.0.1';
 my $osm_port = $cfg->{'postgresql'}->{'osm'}->{'port'} || 5432;
 my $osm_dbname = $cfg->{'postgresql'}->{'osm'}->{'dbname'};
 
-my $extractor  = CalVAD::HPMS::Extractor->new(
 
-    'host_psql'     => $hpms_host,
-    'port_psql'     => $hpms_port,
-    'dbname_psql'   => $hpms_dbname,
-    'username_psql' => $hpms_user,
-    'shwy'          => $shwy,
-    'retry'         => $retry,
 
-);
-
-my $geocoder = CalVAD::HPMS::Geocoder->new(
-
-    # first the sql role
-    'host_psql'     => $osm_host,
-    'port_psql'     => $osm_port,
-    'dbname_psql'   => $osm_dbname,
-    'username_psql' => $osm_user,
-    'shwy'          => $shwy,
-    'county'        => $county,
-);
-
-# quick test to make sure everything is hunky dunky
-
-my $ways = $geocoder->resultset('Public::Way')->count();
-carp "db has $ways ways";
 
 # make sure the geocoder function exists and is up to date
 my @matching_function =  ("psql",
@@ -131,8 +107,31 @@ system(@matching_function) == 0
     or croak "system @matching_function failed: $?";
 
 system(@pg_trigram_args) == 0
-    or croak "system @pg_trigram_args failed: $?";
+    or carp "system @pg_trigram_args failed: $?";
 
+
+my $extractor  = CalVAD::HPMS::Extractor->new(
+
+    'host_psql'     => $hpms_host,
+    'port_psql'     => $hpms_port,
+    'dbname_psql'   => $hpms_dbname,
+    'username_psql' => $hpms_user,
+    'shwy'          => $shwy,
+    'retry'         => $retry,
+    'rows'          => 100,
+
+);
+
+my $geocoder = CalVAD::HPMS::Geocoder->new(
+
+    # first the sql role
+    'host_psql'     => $osm_host,
+    'port_psql'     => $osm_port,
+    'dbname_psql'   => $osm_dbname,
+    'username_psql' => $osm_user,
+    'shwy'          => $shwy,
+    'county'        => $county,
+);
 
 
 sub geometry_handler {
@@ -257,6 +256,19 @@ while ($counter) {
 
     # loop until done
     # or stop hits zero
+
+    # try to avoid a crash here
+    $geocoder = CalVAD::HPMS::Geocoder->new(
+
+        # first the sql role
+        'host_psql'     => $osm_host,
+        'port_psql'     => $osm_port,
+        'dbname_psql'   => $osm_dbname,
+        'username_psql' => $osm_user,
+        'shwy'          => $shwy,
+        'county'        => $county,
+        );
+
 }
 
 1;

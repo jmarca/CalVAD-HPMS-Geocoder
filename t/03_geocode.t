@@ -115,6 +115,17 @@ is($result[1],1.42833243170781);
 is($result[0],'Avenue 116','from to ordering should not matter');
 is($result[1],1.42833243170781,'from to ordering should not matter');
 
+
+
+# problems:
+
+# $VAR1 = {
+#           'from' => 'MISSION ST',
+#           'locality' => '06075',
+#           'road' => 'OTIS ST',
+#           'to' => 'MISSION ST'
+#         };
+
 done_testing;
 
 
