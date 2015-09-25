@@ -249,7 +249,7 @@ select
    s.name,
    s.crossing_name as from_name,
    e.crossing_name as to_name,
-   st_asewkt(st_linemerge(geom)),
+   st_linemerge(geom) as geom,
    (st_length(st_transform(geom,32611)) * 0.000621371192) as len
    from geom_path,start_point s,end_point e
 ';
