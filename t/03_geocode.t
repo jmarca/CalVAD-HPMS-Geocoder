@@ -115,6 +115,35 @@ is($result[1],1.42833243170781);
 is($result[0],'Avenue 116','from to ordering should not matter');
 is($result[1],1.42833243170781,'from to ordering should not matter');
 
+
+
+# problems:
+
+# $VAR1 = {
+#           'from' => 'MISSION ST',
+#           'locality' => '06075',
+#           'road' => 'OTIS ST',
+#           'to' => 'MISSION ST'
+#         };
+
+# I observed that the above query uses gobs of RAM
+# perhaps need an upper bound to the route building thing?
+
+# $VAR1 = {
+#           'road' => 'KING ST',
+#           'to' => 'THE EMBARCADERO',
+#           'from' => 'SECOND ST',
+#           'locality' => '06075'
+#         };
+
+
+# $VAR1 = {
+#           'locality' => '06037',
+#           'from' => 'BOUQUET CANYON RD',
+#           'road' => 'MAIN ST',
+#           'to' => '15TH ST'
+#         };
+
 done_testing;
 
 

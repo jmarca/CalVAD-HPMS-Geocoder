@@ -85,6 +85,31 @@ my $osm_host = $cfg->{'postgresql'}->{'osm'}->{'host'} || '127.0.0.1';
 my $osm_port = $cfg->{'postgresql'}->{'osm'}->{'port'} || 5432;
 my $osm_dbname = $cfg->{'postgresql'}->{'osm'}->{'dbname'};
 
+
+
+
+# make sure the geocoder function exists and is up to date
+my @matching_function =  ("psql",
+                          "-d", "$osm_dbname",
+                          "-U", "$osm_user",
+                          "-h", "$osm_host",
+                          "-p", "$osm_port",
+                          "-f", "./sql/find_road_osm_trigram.sql");
+my @pg_trigram_args =  ("psql",
+                              "-d", "$osm_dbname",
+                              "-U", "$osm_user",
+                              "-h", "$osm_host",
+                              "-p", "$osm_port",
+                              "-c", "CREATE EXTENSION pg_trgm;");
+
+
+system(@matching_function) == 0
+    or croak "system @matching_function failed: $?";
+
+system(@pg_trigram_args) == 0
+    or carp "system @pg_trigram_args failed: $?";
+
+
 my $extractor  = CalVAD::HPMS::Extractor->new(
 
     'host_psql'     => $hpms_host,
@@ -93,6 +118,7 @@ my $extractor  = CalVAD::HPMS::Extractor->new(
     'username_psql' => $hpms_user,
     'shwy'          => $shwy,
     'retry'         => $retry,
+    'rows'          => 100,
 
 );
 
@@ -106,6 +132,7 @@ my $geocoder = CalVAD::HPMS::Geocoder->new(
     'shwy'          => $shwy,
     'county'        => $county,
 );
+
 
 sub geometry_handler {
     my ( $records, $geocoder ) = @_;
@@ -124,7 +151,9 @@ sub geometry_handler {
 
         my @result;
         my $geom;
-        if($fromto->{'name'} && $fromto->{'from'} && $fromto->{'to'})
+        if($fromto->{'name'} && $fromto->{'from'} && $fromto->{'to'}
+           && $fromto->{'from'} neq $fromto->{'to'}
+            )
         {
             carp Dumper {        'locality' => $locality,
                                  'road'     => $fromto->{'name'},
@@ -183,7 +212,7 @@ sub geometry_handler {
     };
 }
 
-my $stop = 30;
+my $stop = 2;
 my $counter          = 0;
 my $choked           = 0;
 my $failed           = 0;
@@ -229,6 +258,19 @@ while ($counter) {
 
     # loop until done
     # or stop hits zero
+
+    # try to avoid a crash here
+    $geocoder = CalVAD::HPMS::Geocoder->new(
+
+        # first the sql role
+        'host_psql'     => $osm_host,
+        'port_psql'     => $osm_port,
+        'dbname_psql'   => $osm_dbname,
+        'username_psql' => $osm_user,
+        'shwy'          => $shwy,
+        'county'        => $county,
+        );
+
 }
 
 1;

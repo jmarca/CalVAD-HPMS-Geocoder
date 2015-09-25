@@ -119,6 +119,12 @@ my $postgis_topology_args =  ["psql",
                               "-h", "$host",
                               "-p", "$port",
                               "-c", "CREATE EXTENSION postgis_topology;"];
+my $pg_trigram_args =  ["psql",
+                              "-d", "$dbname",
+                              "-U", "$user",
+                              "-h", "$host",
+                              "-p", "$port",
+                              "-c", "CREATE EXTENSION pg_trgm;"];
 my $db_deploy_args = ["pg_restore",
                       "-d", "$dbname",
                       "-U", "$user",
@@ -132,7 +138,7 @@ my $matching_function =  ["psql",
                           "-p", "$port",
                           "-f", "./sql/find_road_osm_trigram.sql"];
 
-for my $args ( $postgis_args, $postgis_topology_args, $db_deploy_args, $matching_function)
+for my $args ( $postgis_args, $postgis_topology_args, $db_deploy_args, $pg_trigram_args, $matching_function)
 {
     my @sysargs = @{$args};
     system(@sysargs) == 0
