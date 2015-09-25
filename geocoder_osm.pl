@@ -151,7 +151,9 @@ sub geometry_handler {
 
         my @result;
         my $geom;
-        if($fromto->{'name'} && $fromto->{'from'} && $fromto->{'to'})
+        if($fromto->{'name'} && $fromto->{'from'} && $fromto->{'to'}
+           && $fromto->{'from'} neq $fromto->{'to'}
+            )
         {
             carp Dumper {        'locality' => $locality,
                                  'road'     => $fromto->{'name'},
