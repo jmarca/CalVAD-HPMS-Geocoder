@@ -74,3 +74,7 @@ select (res).name,(res).len  from (select find_road_from_to_osm_trigram('DIAGONA
 
 
 -- need to fix the ordering bug
+
+
+
+-- fixed the ordering bug
