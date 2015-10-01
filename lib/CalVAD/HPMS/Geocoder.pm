@@ -63,7 +63,7 @@ class Geocoder using Moose : ro {
     my $_get_roadway_section_trigram_osm = sub{
         my ($storage, $dbh, $nearcl, @colvals ) = @_;
 
-        my $geoquery = q{select (res).name,(res).len,(res).geom,(res).fromname,(res).toname  from (select find_road_from_to_osm_trigram($1,$2,$3,$4) as res) a };
+        my $geoquery = q{select * from find_road_from_to_osm_pgrouting ($1,$2,$3,$4) };
         my @row;
 
         if($nearcl){

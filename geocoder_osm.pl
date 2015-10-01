@@ -94,7 +94,8 @@ my @matching_function =  ("psql",
                           "-U", "$osm_user",
                           "-h", "$osm_host",
                           "-p", "$osm_port",
-                          "-f", "./sql/find_road_osm_trigram.sql");
+                          "-f", "./sql/find_road_from_to_pgrouting.sql");
+
 my @pg_trigram_args =  ("psql",
                               "-d", "$osm_dbname",
                               "-U", "$osm_user",
@@ -103,11 +104,12 @@ my @pg_trigram_args =  ("psql",
                               "-c", "CREATE EXTENSION pg_trgm;");
 
 
-system(@matching_function) == 0
-    or croak "system @matching_function failed: $?";
-
 system(@pg_trigram_args) == 0
     or carp "system @pg_trigram_args failed: $?";
+
+
+system(@matching_function) == 0
+    or croak "system @matching_function failed: $?";
 
 
 my $extractor  = CalVAD::HPMS::Extractor->new(

@@ -23,11 +23,11 @@ select id, name into way_name_variants from name_values ;
 
 
 
-CREATE MATERIALIZED VIEW way_name_view AS
+CREATE MATERIALIZED VIEW osm.way_name_view AS
 with
     roadways as (
         select *
-        from ways
+        from osm.ways
         where tags ? 'highway'
     ),
     tag_values as (
